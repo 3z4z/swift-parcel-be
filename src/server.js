@@ -33,7 +33,7 @@ app.set("io", io);
 
 app.use(
   cors({
-    origin: [process.env.SITE_DOMAIN, "http://localhost:5173"],
+    origin: process.env.SITE_DOMAIN || "http://localhost:5173",
     credentials: true,
   })
 );
