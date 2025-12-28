@@ -1,0 +1,8 @@
+# folders
+node_modules
+
+# files
+.env
+encode.js
+*sdk.json
+.vscode/*
