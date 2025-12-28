@@ -16,7 +16,7 @@ const server = http.createServer(app);
 // socket setup
 const io = new Server(server, {
   cors: {
-    origin: [process.env.SITE_DOMAIN],
+    origin: [process.env.SITE_DOMAIN, "http://localhost:5173"],
     credentials: true,
   },
 });
@@ -33,7 +33,7 @@ app.set("io", io);
 
 app.use(
   cors({
-    origin: [process.env.SITE_DOMAIN],
+    origin: [process.env.SITE_DOMAIN, "http://localhost:5173"],
     credentials: true,
   })
 );
