@@ -12,7 +12,6 @@ dotenv.config();
 
 // server create for socket
 const server = http.createServer(app);
-const connectedUsers = {};
 
 // socket setup
 const io = new Server(server, {
@@ -25,23 +24,11 @@ const io = new Server(server, {
 // client connection
 io.on("connection", (socket) => {
   console.log("Client connected", socket.id);
-  socket.on("register", (userEmail) => {
-    connectedUsers[userEmail] = socket.id;
-    console.log(`User registered ${userEmail} > ${socket.id}`);
-  });
   socket.on("disconnect", () => {
     console.log("Client disconnected", socket.id);
-    for (let userEmail in connectedUsers) {
-      if (connectedUsers[userEmail] === socket.id) {
-        delete connectedUsers[userEmail];
-        console.log(`User disconnected ${userEmail}`);
-        break;
-      }
-    }
   });
 });
 
-app.set("connectedUsers", connectedUsers);
 app.set("io", io);
 
 app.use(

@@ -61,7 +61,6 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
   });
   router.patch("/:id", verifyAuthToken, async (req, res) => {
     const io = req.app.get("io");
-    const connectedUsers = req.app.get("connectedUsers");
     const {
       senderEmail,
       parcelMovementStatus,
@@ -71,6 +70,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       pickupRider,
       deliveryRider,
     } = req.body;
+    console.log("pickupRider", pickupRider, deliveryRider);
     const updateDoc = {
       $set: {
         parcelMovementStatus,
@@ -92,8 +92,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       details,
       location
     );
-    const userSocketId = connectedUsers[senderEmail];
-    io.to(userSocketId).emit("parcel-update", {
+    io.emit("parcel-update", {
       trackingId,
       details,
       timestamp: new Date(),
@@ -119,9 +118,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
     verifyAuthToken,
     verifyAdmin,
     async (req, res) => {
-      const io = req.app.get("io");
-      const connectedUsers = req.app.get("connectedUsers");
-      const { senderEmail, trackingId, location } = req.body;
+      const { trackingId, location } = req.body;
       const updateDoc = {
         $set: {
           cancelled: true,
@@ -141,9 +138,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
         location
       );
 
-      const userSocketId = connectedUsers[senderEmail];
-
-      io.to(userSocketId).emit("order-cancel", {
+      io.emit("order-cancel", {
         trackingId,
         details: "Order has been cancelled by an Admin",
         timestamp: new Date(),
