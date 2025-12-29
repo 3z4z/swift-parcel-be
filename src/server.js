@@ -26,7 +26,7 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("Client connected", socket.id);
   socket.on("register", (userEmail) => {
-    connectedUsers[userEmail] === socket.id;
+    connectedUsers[userEmail] = socket.id;
     console.log(`User registered ${userEmail} > ${socket.id}`);
   });
   socket.on("disconnect", () => {

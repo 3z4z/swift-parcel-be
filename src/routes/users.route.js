@@ -23,12 +23,12 @@ const userRoute = ({ usersCollection, ObjectId }) => {
         maxAge: expiresIn,
 
         // --- Local ---
-        // secure: false,
-        // sameSite: "lax",
+        secure: false,
+        sameSite: "lax",
 
         // --- Prod ---
-        sameSite: "none",
-        secure: true,
+        // sameSite: "none",
+        // secure: true,
       });
       res.send({ message: "Log in successful!", email });
     } catch (err) {
