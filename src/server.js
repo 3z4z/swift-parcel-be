@@ -41,6 +41,7 @@ io.on("connection", (socket) => {
   });
 });
 
+app.set("connectedUsers", connectedUsers);
 app.set("io", io);
 
 app.use(

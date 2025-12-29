@@ -61,6 +61,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
   });
   router.patch("/:id", verifyAuthToken, async (req, res) => {
     const io = req.app.get("io");
+    const connectedUsers = req.app.get("connectedUsers");
     const {
       senderEmail,
       parcelMovementStatus,
@@ -70,7 +71,6 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       pickupRider,
       deliveryRider,
     } = req.body;
-    console.log("pickupRider", pickupRider, deliveryRider);
     const updateDoc = {
       $set: {
         parcelMovementStatus,
@@ -119,6 +119,8 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
     verifyAuthToken,
     verifyAdmin,
     async (req, res) => {
+      const io = req.app.get("io");
+      const connectedUsers = req.app.get("connectedUsers");
       const { senderEmail, trackingId, location } = req.body;
       const updateDoc = {
         $set: {
