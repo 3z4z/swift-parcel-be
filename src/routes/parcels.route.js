@@ -118,6 +118,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
     verifyAuthToken,
     verifyAdmin,
     async (req, res) => {
+      const io = req.app.get("io");
       const { trackingId, location } = req.body;
       const updateDoc = {
         $set: {
