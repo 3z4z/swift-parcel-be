@@ -4,6 +4,7 @@ const verifyAuthToken = require("../middlewares/auth");
 const generateTrackingId = require("../utils/tracking");
 const logTracking = require("../utils/logTracking");
 const verifyAdmin = require("../middlewares/admin");
+const sendEmail = require("../utils/sendEmail");
 
 const parcelRoute = ({ parcelsCollection, ObjectId }) => {
   const router = express.Router();
@@ -61,6 +62,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
   router.patch("/:id", verifyAuthToken, async (req, res) => {
     const io = req.app.get("io");
     const {
+      senderEmail,
       parcelMovementStatus,
       trackingId,
       details,
@@ -68,6 +70,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       pickupRider,
       deliveryRider,
     } = req.body;
+    console.log("pickupRider", pickupRider, deliveryRider);
     const updateDoc = {
       $set: {
         parcelMovementStatus,
@@ -89,11 +92,26 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       details,
       location
     );
-    io.emit("parcel-update", {
+    const userSocketId = connectedUsers[senderEmail];
+    io.to(userSocketId).emit("parcel-update", {
       trackingId,
       details,
       timestamp: new Date(),
     });
+    if (parcelMovementStatus === "picked") {
+      sendEmail({
+        to: senderEmail,
+        subject: `Your parcel has been picked`,
+        html: `Parcel has been picked up by ${pickupRider.riderName}. Tracking ID: ${trackingId}`,
+      });
+    }
+    if (parcelMovementStatus === "delivered") {
+      sendEmail({
+        to: senderEmail,
+        subject: `Your parcel has been delivered.`,
+        html: `Parcel has been delivered by ${deliveryRider.riderName}. Tracking ID: ${trackingId}`,
+      });
+    }
     return res.send(result);
   });
   router.patch(
@@ -101,7 +119,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
     verifyAuthToken,
     verifyAdmin,
     async (req, res) => {
-      const { trackingId, location } = req.body;
+      const { senderEmail, trackingId, location } = req.body;
       const updateDoc = {
         $set: {
           cancelled: true,
@@ -121,7 +139,9 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
         location
       );
 
-      io.emit("order-cancel", {
+      const userSocketId = connectedUsers[senderEmail];
+
+      io.to(userSocketId).emit("order-cancel", {
         trackingId,
         details: "Order has been cancelled by an Admin",
         timestamp: new Date(),

@@ -12,6 +12,7 @@ dotenv.config();
 
 // server create for socket
 const server = http.createServer(app);
+const connectedUsers = {};
 
 // socket setup
 const io = new Server(server, {
@@ -24,8 +25,19 @@ const io = new Server(server, {
 // client connection
 io.on("connection", (socket) => {
   console.log("Client connected", socket.id);
+  socket.on("register", (userEmail) => {
+    connectedUsers[userEmail] === socket.id;
+    console.log(`User registered ${userEmail} > ${socket.id}`);
+  });
   socket.on("disconnect", () => {
     console.log("Client disconnected", socket.id);
+    for (let userEmail in connectedUsers) {
+      if (connectedUsers[userEmail] === socket.id) {
+        delete connectedUsers[userEmail];
+        console.log(`User disconnected ${userEmail}`);
+        break;
+      }
+    }
   });
 });
 
@@ -33,7 +45,7 @@ app.set("io", io);
 
 app.use(
   cors({
-    origin: process.env.SITE_DOMAIN || "http://localhost:5173",
+    origin: [process.env.SITE_DOMAIN, "http://localhost:5173"],
     credentials: true,
   })
 );
@@ -61,7 +73,6 @@ async function startServer() {
   app.use("/parcels", parcelRoute(collections));
   app.use("/trackings", trackingRoute(collections));
 
-  // IMPORTANT: Use server.listen, NOT app.listen
   server.listen(port, () => {
     console.log(`Server + Socket.IO running at http://localhost:${port}`);
   });
