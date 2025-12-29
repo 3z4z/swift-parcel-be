@@ -92,7 +92,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       details,
       location
     );
-    io.emit("parcel-update", {
+    io.to(senderEmail).emit("parcel-update", {
       trackingId,
       details,
       timestamp: new Date(),
@@ -119,7 +119,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
     verifyAdmin,
     async (req, res) => {
       const io = req.app.get("io");
-      const { trackingId, location } = req.body;
+      const { senderEmail, trackingId, location } = req.body;
       const updateDoc = {
         $set: {
           cancelled: true,
@@ -139,7 +139,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
         location
       );
 
-      io.emit("order-cancel", {
+      io.to(senderEmail).emit("order-cancel", {
         trackingId,
         details: "Order has been cancelled by an Admin",
         timestamp: new Date(),
