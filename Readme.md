@@ -50,6 +50,8 @@ EMAIL_PASS=<your-nodemailer-secret-password>
 
 ```
 npm run dev
+#or
+npm start
 ```
 
 The server will run on `http://localhost:3000`.
