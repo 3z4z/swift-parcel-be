@@ -24,6 +24,110 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
     const result = await parcelsCollection.find(query).toArray();
     res.send(result);
   });
+  router.get("/analytics", verifyAuthToken, verifyAdmin, async (_, res) => {
+    const result = await parcelsCollection
+      .aggregate([
+        {
+          $group: {
+            _id: {
+              $switch: {
+                branches: [
+                  {
+                    case: { $eq: ["$parcelMovementStatus", "pending"] },
+                    then: "pending",
+                  },
+                  {
+                    case: {
+                      $in: [
+                        "$parcelMovementStatus",
+                        [
+                          "assigned",
+                          "picked",
+                          "to-central",
+                          "assigned-to-deliver",
+                          "going-to-receiver",
+                        ],
+                      ],
+                    },
+                    then: "assigned",
+                  },
+                  {
+                    case: { $eq: ["$parcelMovementStatus", "delivered"] },
+                    then: "delivered",
+                  },
+                  {
+                    case: { $eq: ["$parcelMovementStatus", "cancelled"] },
+                    then: "cancelled",
+                  },
+                ],
+                default: "others",
+              },
+            },
+            count: { $sum: 1 },
+          },
+        },
+      ])
+      .toArray();
+    res.send(result);
+  });
+  router.get("/analytics/cod", verifyAuthToken, verifyAdmin, async (_, res) => {
+    const result = await parcelsCollection
+      .aggregate([
+        {
+          $match: {
+            parcelMovementStatus: "delivered",
+            paymentStatus: "cod",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$parcelCost" },
+          },
+        },
+      ])
+      .toArray();
+    res.send(result);
+  });
+  router.get("/analytics/daily-orders", verifyAuthToken, async (_, res) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 6);
+
+    const result = await parcelsCollection
+      .aggregate([
+        {
+          $match: {
+            createdAt: { $gte: lastWeek, $lte: new Date() },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray();
+    const finalResult = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(lastWeek);
+      d.setDate(lastWeek.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      const found = result.find((r) => r._id === key);
+      finalResult.unshift({
+        date: key,
+        count: found ? found.count : 0,
+      });
+    }
+
+    res.send(finalResult);
+  });
   router.post("/cost-calculation", verifyAuthToken, (req, res) => {
     const parcelInfo = req.body;
     const cost = calculateCost(parcelInfo);
@@ -53,6 +157,47 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       return res.status(500).send({ message: "Something went wrong!" });
     }
   });
+  router.get("/analytics/:email", verifyAuthToken, async (req, res) => {
+    const { email } = req.params;
+    const result = await parcelsCollection
+      .aggregate([
+        {
+          $match: { senderEmail: email },
+        },
+        {
+          $group: {
+            _id: null,
+            pending: {
+              $sum: {
+                $cond: [{ $eq: ["$parcelMovementStatus", "pending"] }, 1, 0],
+              },
+            },
+            delivered: {
+              $sum: {
+                $cond: [{ $eq: ["$parcelMovementStatus", "delivered"] }, 1, 0],
+              },
+            },
+            cancelled: {
+              $sum: {
+                $cond: [{ $eq: ["$parcelMovementStatus", "cancelled"] }, 1, 0],
+              },
+            },
+            total: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            pending: 1,
+            delivered: 1,
+            cancelled: 1,
+            total: 1,
+          },
+        },
+      ])
+      .toArray();
+    res.send(result[0] || { pending: 0, delivered: 0, cancelled: 0, total: 0 });
+  });
   router.get("/:id", verifyAuthToken, async (req, res) => {
     const result = await parcelsCollection.findOne({
       _id: new ObjectId(req.params.id),
@@ -70,7 +215,6 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       pickupRider,
       deliveryRider,
     } = req.body;
-    console.log("pickupRider", pickupRider, deliveryRider);
     const updateDoc = {
       $set: {
         parcelMovementStatus,

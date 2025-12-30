@@ -49,6 +49,7 @@ const { connectDB } = require("./configs/db");
 const userRoute = require("./routes/users.route");
 const parcelRoute = require("./routes/parcels.route");
 const trackingRoute = require("./routes/trackings.route");
+const exportsRoute = require("./routes/exports.route");
 
 const port = process.env.PORT || 3000;
 
@@ -64,6 +65,7 @@ async function startServer() {
   app.use("/users", userRoute(collections));
   app.use("/parcels", parcelRoute(collections));
   app.use("/trackings", trackingRoute(collections));
+  app.use("/export", exportsRoute(collections));
 
   server.listen(port, () => {
     console.log(`Server + Socket.IO running at http://localhost:${port}`);
