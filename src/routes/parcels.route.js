@@ -136,6 +136,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
   router.post("/", verifyAuthToken, async (req, res) => {
     try {
       const parcelInfo = req.body;
+      console.log("parcelInfo", parcelInfo);
       const serverCalculatedCost = await calculateCost(parcelInfo);
       const newBooking = {
         ...parcelInfo,
@@ -150,8 +151,15 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
         newBooking.trackingId,
         parcelInfo.deliveryStatus,
         "Parcel has been booked",
-        parcelInfo?.location
+        parcelInfo?.location,
       );
+      if (parcelInfo.parcelMovementStatus === "pending") {
+        sendEmail({
+          to: parcelInfo.senderEmail,
+          subject: `Your parcel has been created successfully!`,
+          html: `Your parcel is created successfully and will be approved soon by our admin team. Thank you so much for using Swift Parcel App. Parcel Tracking ID: ${newBooking.trackingId}`,
+        });
+      }
       return res.status(201).send({ message: "Booking added successfully!" });
     } catch {
       return res.status(500).send({ message: "Something went wrong!" });
@@ -226,7 +234,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       {
         _id: new ObjectId(req.params.id),
       },
-      updateDoc
+      updateDoc,
     );
     logTracking(
       req,
@@ -234,13 +242,20 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       trackingId,
       parcelMovementStatus,
       details,
-      location
+      location,
     );
     io.to(senderEmail).emit("parcel-update", {
       trackingId,
       details,
       timestamp: new Date(),
     });
+    if (parcelMovementStatus === "accepted") {
+      sendEmail({
+        to: senderEmail,
+        subject: `Parcel Accepted - SP Mod Team`,
+        html: `Your Parcel (Tracking ID: ${trackingId}) has been accepted by Admin. Soon it will be picked up and we will notify you. Thanks for Staying with swift parcel`,
+      });
+    }
     if (parcelMovementStatus === "picked") {
       sendEmail({
         to: senderEmail,
@@ -272,7 +287,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
       };
       const result = await parcelsCollection.updateOne(
         { _id: new ObjectId(req.params.id) },
-        updateDoc
+        updateDoc,
       );
       logTracking(
         req,
@@ -280,7 +295,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
         trackingId,
         "cancelled",
         "Order has been cancelled by an Admin",
-        location
+        location,
       );
 
       io.to(senderEmail).emit("order-cancel", {
@@ -289,7 +304,7 @@ const parcelRoute = ({ parcelsCollection, ObjectId }) => {
         timestamp: new Date(),
       });
       res.send(result);
-    }
+    },
   );
   return router;
 };
